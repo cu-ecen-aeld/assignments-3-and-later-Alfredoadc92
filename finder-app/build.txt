@@ -1,0 +1,30 @@
+# Variables
+CC = gcc
+CFLAGS = -Wall -Werror
+TARGET = writer
+SRC = writer.c
+OBJ = $(SRC:.c=.o)
+
+# Default target builds the writer application
+all: $(TARGET)
+
+# Compile source files into object files
+%.o: %.c
+    $(CC) $(CFLAGS) -c $< -o $@
+
+# Link object files to create the executable
+$(TARGET): $(OBJ)
+    $(CC) $(OBJ) -o $@
+
+# Clean target removes the writer application and all .o files
+clean:
+    rm -f $(TARGET) $(OBJ)
+
+# Support for cross-compilation
+ifeq ($(CROSS_COMPILE),)
+CROSS_COMPILE =
+endif
+
+CC := $(CROSS_COMPILE)gcc
+
+.PHONY: all clean
