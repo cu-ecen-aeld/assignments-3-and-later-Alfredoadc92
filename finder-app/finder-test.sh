@@ -31,14 +31,6 @@ echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
 rm -rf "${WRITEDIR}"
 
-# Clean previous build artifacts
-echo "Cleaning previous build artifacts"
-make clean
-
-# Compile the writer application
-echo "Compiling the writer application"
-make
-
 # create $WRITEDIR if not assignment1
 assignment=`cat ../conf/assignment.txt`
 

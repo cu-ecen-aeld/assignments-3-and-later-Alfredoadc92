@@ -1,4 +1,11 @@
 #include "systemcalls.h"
+#include "sys/types.h"
+#include "stdlib.h"
+#include <sys/wait.h>
+#include <stdbool.h>
+#include <stdarg.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,8 +23,16 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    bool retVal = true;
+    int ret;
 
-    return true;
+    ret = system(cmd);
+    if (ret == -1 || WEXITSTATUS(ret) != 0) 
+    {
+        retVal = false;
+    }
+
+    return retVal;
 }
 
 /**
@@ -40,6 +55,8 @@ bool do_exec(int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    bool retVal = true;
+
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -61,7 +78,34 @@ bool do_exec(int count, ...)
 
     va_end(args);
 
-    return true;
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        retVal = false;
+    }
+    else if (pid == 0)
+    {
+        execv(command[0], command);
+        _exit(EXIT_FAILURE); // execv only returns on failure
+    }
+    else
+    {
+        int status;
+        if (waitpid(pid, &status, 0) == -1)
+        {
+            retVal = false;
+        }
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            retVal = true;
+        }
+        else
+        {
+            retVal = false;
+        }
+    }
+
+    return retVal;
 }
 
 /**
@@ -75,6 +119,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    bool retVal = true;
+
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -95,5 +141,43 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     va_end(args);
 
-    return true;
+    pid_t pid = fork();
+    if (pid == -1) 
+    {
+        retVal = false;
+    }
+    else if (pid == 0)
+    {
+        int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd == -1)
+        {
+            _exit(EXIT_FAILURE);
+        }
+        if (dup2(fd, STDOUT_FILENO) == -1)
+        {
+            close(fd);
+            _exit(EXIT_FAILURE);
+        }
+        close(fd);
+        execv(command[0], command);
+        _exit(EXIT_FAILURE); // execv only returns on failure
+    }
+    else
+    {
+        int status;
+        if (waitpid(pid, &status, 0) == -1)
+        {
+            retVal = false;
+        }
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            retVal = true;
+        }
+        else
+        {
+            retVal = false;
+        }
+    }
+
+    return retVal;
 }
